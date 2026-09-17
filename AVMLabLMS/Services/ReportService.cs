@@ -23,13 +23,15 @@ namespace AVMLabLMS.Services
                                   .ToList();
 
             var wos = await _context.WorkOrders
+                .Include(w => w.Items)
                 .Where(w => w.WODate.Date >= from.Date && w.WODate.Date <= to.Date)
                 .GroupBy(w => w.WODate.Date)
                 .Select(g => new
                 {
                     Date = g.Key,
                     Count = g.Count(),
-                    Revenue = g.Sum(w => w.TotalAmount)
+                    Revenue = g.Sum(w => w.TotalAmount),
+                    Tests = g.SelectMany(w => w.Items).Sum(i => i.Quantity)
                 })
                 .ToDictionaryAsync(k => k.Date, v => v);
 
@@ -40,6 +42,7 @@ namespace AVMLabLMS.Services
                 {
                     Date = date,
                     TotalWorkOrders = wos.ContainsKey(date) ? wos[date].Count : 0,
+                    TotalTests = wos.ContainsKey(date) ? wos[date].Tests : 0,
                     TotalRevenue = wos.ContainsKey(date) ? wos[date].Revenue : 0
                 });
             }
@@ -86,9 +89,13 @@ namespace AVMLabLMS.Services
             return report;
         }
 
-        public async Task<decimal> GetTotalGatewayFeesAsync()
+        public async Task<decimal> GetTotalGatewayFeesAsync(DateTime? from, DateTime? to)
         {
-            return await _context.Payments.SumAsync(p => p.GatewayFee);
+            var query = _context.Payments.AsQueryable();
+            if (from.HasValue) query = query.Where(p => p.PaymentDate >= from.Value);
+            if (to.HasValue) query = query.Where(p => p.PaymentDate <= to.Value);
+            
+            return await query.SumAsync(p => p.GatewayFee);
         }
     }
 }

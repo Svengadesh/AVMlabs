@@ -1,65 +1,36 @@
 # AVMLabLMS
 
-AVMLabLMS is an ASP.NET Core MVC + Web API project created for the AVMLabs Technical Assessment. It includes full functionality for managing Clients, Work Orders, Invoices, Payments, and Reports, while accurately tracking NBL (No Balance Limit) status.
+AVMLabLMS is an ASP.NET Core MVC + Web API application created for the AVMLabs Technical Assessment.
+
+The application manages Clients, Work Orders, Invoices, Payments and Reports. It also implements NBL (No Balance Limit) validation and client ledger tracking.
 
 ## Prerequisites
 
 - .NET 10 SDK
-- SQL Server (LocalDB or full instance)
+- Visual Studio Code or Visual Studio
+- SQLite (no separate database server installation is required)
 
 ## Project Structure
 
-This is a single project architecture focusing on simplicity and clarity, suitable for an intermediate developer without over-engineering.
+This solution uses a single ASP.NET Core project for both MVC pages and Web API endpoints.
 
-- **Controllers & Views**: Handles UI and Razor pages rendering.
-- **ApiControllers**: Provides RESTful APIs endpoints for Javascript front-end fetch calls.
-- **Services**: Encapsulates business rules (NBL Calculation, Gateway Fees).
-- **Models & DTOs**: Entity framework models and data transfer objects.
-- **SQL**: Contains the `Assignment.sql` script with required queries and Stored Procedures.
+- **Controllers** - MVC controllers used to load Razor views.
+- **ApiControllers** - REST API controllers used by the JavaScript/fetch frontend.
+- **Services** - Contains business logic such as NBL calculation, Work Order validation, payments and reports.
+- **Models** - Entity Framework Core database entities.
+- **DTOs** - Data Transfer Objects used between the API and frontend.
+- **Data** - DbContext and database seeding.
+- **Views** - Razor/CSHTML pages.
+- **wwwroot/css** - Application styling.
+- **SQL** - Contains `Assignment.sql` with the SQL Server schema, seed data, queries and stored procedure.
 
-## Business Rules Implemented
+## Database
 
-1. **NBL Calculation**: NBL status means outstanding balance is 0. Outstanding balance = Pending Invoice Amount + In-Transit Work Order Amount. Credit Limit does NOT affect NBL status.
-2. **Work Order Validation**: Only NBL clients can create Work Orders.
-3. **Gateway Fee**: If Payment Mode is 'Online', a 2% fee is separately calculated and debited in the client's ledger.
+The current application uses SQLite with Entity Framework Core. No SQL Server installation is required to run this application locally.
 
-## Setup Instructions
+The database connection is configured in `appsettings.json`:
 
-1. **Database Setup**
-   The application uses EF Core Code-First migrations. Connection string is configured in `appsettings.json` to use localdb by default:
-   ```json
-   "DefaultConnection": "Server=(localdb)\\mssqllocaldb;Database=AVMLabLMSDb;Trusted_Connection=True;MultipleActiveResultSets=true"
-   ```
-
-2. **Restore Packages & Build**
-   ```bash
-   dotnet restore
-   dotnet build
-   ```
-
-3. **Apply Migrations**
-   Install the EF tools if not already present:
-   ```bash
-   dotnet tool install --global dotnet-ef
-   ```
-   Then apply migrations (or let the app auto-migrate on startup):
-   ```bash
-   dotnet ef migrations add InitialCreate
-   dotnet ef database update
-   ```
-   *Note: The application has a DbSeeder configured in Program.cs that automatically calls `context.Database.Migrate()` and seeds required data on startup.*
-
-4. **Run the Application**
-   ```bash
-   dotnet run
-   ```
-   
-   - **MVC Frontend**: Open `https://localhost:xxxx/` or `http://localhost:yyyy/`
-   - **Swagger UI**: Open `/swagger/index.html` to view API documentation and test endpoints.
-
-## Features
-
-- Client listing with search and pagination (API).
-- Client ledger showing running balance, gateway fees, and payments.
-- Work Order creation with real-time NBL validation via fetch API.
-- Dashboard with dynamic Chart.js integration showing 30-day revenue and Top 5 Outstanding Clients.
+```json
+"ConnectionStrings": {
+  "DefaultConnection": "Data Source=app.db"
+}

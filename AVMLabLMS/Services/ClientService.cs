@@ -20,12 +20,12 @@ namespace AVMLabLMS.Services
 
             if (!string.IsNullOrEmpty(search))
             {
-                query = query.Where(c => c.ClientName.Contains(search));
+                query = query.Where(c => c.ClientName.ToLower().Contains(search.ToLower()));
             }
 
             if (!string.IsNullOrEmpty(country))
             {
-                query = query.Where(c => c.Country == country);
+                query = query.Where(c => c.Country.ToLower() == country.ToLower());
             }
 
             var clients = await query
@@ -159,6 +159,69 @@ namespace AVMLabLMS.Services
             if (client == null) return false;
 
             client.IsActive = !client.IsActive;
+            await _context.SaveChangesAsync();
+            return true;
+        }
+
+        public async Task<ClientDTO> CreateClientAsync(CreateClientDTO dto)
+        {
+            var client = new Client
+            {
+                ClientName = dto.ClientName,
+                ContactPerson = dto.ContactPerson ?? "",
+                Phone = dto.Phone ?? "",
+                Email = dto.Email ?? "",
+                City = dto.City ?? "",
+                Country = dto.Country ?? "",
+                CreditLimit = dto.CreditLimit,
+                IsActive = true
+            };
+            
+            _context.Clients.Add(client);
+            await _context.SaveChangesAsync();
+            
+            return new ClientDTO
+            {
+                ClientId = client.ClientId,
+                ClientName = client.ClientName,
+                City = client.City,
+                Country = client.Country,
+                CreditLimit = client.CreditLimit,
+                OutstandingBalance = 0,
+                NblStatus = "NBL",
+                IsActive = client.IsActive
+            };
+        }
+
+        public async Task<CreateClientDTO> GetClientByIdAsync(int clientId)
+        {
+            var client = await _context.Clients.FindAsync(clientId);
+            if (client == null) return null;
+            return new CreateClientDTO
+            {
+                ClientName = client.ClientName,
+                ContactPerson = client.ContactPerson,
+                Phone = client.Phone,
+                Email = client.Email,
+                City = client.City,
+                Country = client.Country,
+                CreditLimit = client.CreditLimit
+            };
+        }
+
+        public async Task<bool> UpdateClientAsync(int clientId, CreateClientDTO dto)
+        {
+            var client = await _context.Clients.FindAsync(clientId);
+            if (client == null) return false;
+
+            client.ClientName = dto.ClientName;
+            client.ContactPerson = dto.ContactPerson ?? "";
+            client.Phone = dto.Phone ?? "";
+            client.Email = dto.Email ?? "";
+            client.City = dto.City ?? "";
+            client.Country = dto.Country ?? "";
+            client.CreditLimit = dto.CreditLimit;
+
             await _context.SaveChangesAsync();
             return true;
         }

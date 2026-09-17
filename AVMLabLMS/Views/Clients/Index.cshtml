@@ -19,6 +19,7 @@
             </div>
             <div class="col-md-3">
                 <button type="submit" class="btn btn-primary">Search</button>
+                <button type="button" class="btn btn-success ms-2" onclick="openAddModal()">+ Add Client</button>
             </div>
         </form>
     </div>
@@ -49,6 +50,57 @@
     </ul>
 </nav>
 
+<!-- Edit Client Modal -->
+<div class="modal fade" id="editClientModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="clientModalTitle">Client Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="editClientForm" onsubmit="event.preventDefault(); saveClient();">
+                    <input type="hidden" id="editClientId">
+                    <div class="mb-3">
+                        <label class="form-label">Client Name</label>
+                        <input type="text" class="form-control" id="editClientName" required>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Contact Person</label>
+                            <input type="text" class="form-control" id="editContactPerson">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Phone</label>
+                            <input type="text" class="form-control" id="editPhone">
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Email</label>
+                        <input type="email" class="form-control" id="editEmail">
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label">City</label>
+                            <input type="text" class="form-control" id="editCity">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Country</label>
+                            <input type="text" class="form-control" id="editCountry">
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Credit Limit</label>
+                        <input type="number" step="0.01" class="form-control" id="editCreditLimit" required>
+                    </div>
+                    <div id="editClientAlert" class="alert d-none mt-3"></div>
+                    <button type="submit" class="btn btn-primary w-100">Save Changes</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
 @section Scripts {
     <script>
         let currentPage = 1;
@@ -76,18 +128,19 @@
             
             clients.forEach(c => {
                 const tr = document.createElement('tr');
-                const statusClass = c.nblStatus === 'NBL' ? 'nbl-status-nbl' : 'nbl-status-non-nbl';
+                const badgeClass = c.nblStatus === 'NBL' ? 'bg-success' : 'bg-danger';
                 
                 tr.innerHTML = `
-                    <td>${c.clientName}</td>
+                    <td class="fw-medium">${c.clientName}</td>
                     <td>${c.city}</td>
                     <td>${c.country}</td>
-                    <td>${c.creditLimit.toFixed(2)}</td>
-                    <td>${c.outstandingBalance.toFixed(2)}</td>
-                    <td class="${statusClass}">${c.nblStatus}</td>
+                    <td>$${c.creditLimit.toFixed(2)}</td>
+                    <td class="fw-bold">$${c.outstandingBalance.toFixed(2)}</td>
+                    <td><span class="badge ${badgeClass}">${c.nblStatus}</span></td>
                     <td>
-                        <a href="/Clients/Ledger/${c.clientId}" class="btn btn-sm btn-info">Ledger</a>
-                        <button onclick="toggleStatus(${c.clientId})" class="btn btn-sm ${c.isActive ? 'btn-danger' : 'btn-success'}">
+                        <a href="/Clients/Ledger/${c.clientId}" class="btn btn-sm btn-outline-primary">Ledger</a>
+                        <button class="btn btn-sm btn-outline-secondary ms-1" onclick="openEditModal(${c.clientId})">Edit</button>
+                        <button onclick="toggleStatus(${c.clientId})" class="btn btn-sm ${c.isActive ? 'btn-outline-danger' : 'btn-outline-success'} ms-1">
                             ${c.isActive ? 'Disable' : 'Enable'}
                         </button>
                     </td>
@@ -102,6 +155,77 @@
                 if (response.ok) {
                     loadClients(currentPage);
                 }
+            }
+        }
+
+        function openAddModal() {
+            document.getElementById('editClientForm').reset();
+            document.getElementById('editClientId').value = '';
+            document.getElementById('clientModalTitle').innerText = 'Add New Client';
+            document.getElementById('editClientAlert').className = 'alert d-none mt-3';
+            const modal = new bootstrap.Modal(document.getElementById('editClientModal'));
+            modal.show();
+        }
+
+        async function openEditModal(id) {
+            const res = await fetch(`/api/clients/${id}`);
+            if (res.ok) {
+                const client = await res.json();
+                document.getElementById('editClientId').value = id;
+                document.getElementById('editClientName').value = client.clientName;
+                document.getElementById('editContactPerson').value = client.contactPerson || '';
+                document.getElementById('editPhone').value = client.phone || '';
+                document.getElementById('editEmail').value = client.email || '';
+                document.getElementById('editCity').value = client.city || '';
+                document.getElementById('editCountry').value = client.country || '';
+                document.getElementById('editCreditLimit').value = client.creditLimit;
+                
+                document.getElementById('clientModalTitle').innerText = 'Edit Client';
+                document.getElementById('editClientAlert').className = 'alert d-none mt-3';
+                
+                const modal = new bootstrap.Modal(document.getElementById('editClientModal'));
+                modal.show();
+            } else {
+                alert('Could not load client details.');
+            }
+        }
+
+        async function saveClient() {
+            const id = document.getElementById('editClientId').value;
+            const payload = {
+                clientName: document.getElementById('editClientName').value,
+                contactPerson: document.getElementById('editContactPerson').value,
+                phone: document.getElementById('editPhone').value,
+                email: document.getElementById('editEmail').value,
+                city: document.getElementById('editCity').value,
+                country: document.getElementById('editCountry').value,
+                creditLimit: parseFloat(document.getElementById('editCreditLimit').value)
+            };
+
+            const alertBox = document.getElementById('editClientAlert');
+            
+            const isEdit = id !== '';
+            const url = isEdit ? `/api/clients/${id}` : `/api/clients`;
+            const method = isEdit ? 'PUT' : 'POST';
+
+            const res = await fetch(url, {
+                method: method,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            if (res.ok) {
+                alertBox.className = 'alert alert-success mt-3';
+                alertBox.innerText = isEdit ? 'Client updated successfully.' : 'Client created successfully.';
+                setTimeout(() => {
+                    const modalEl = document.getElementById('editClientModal');
+                    const modal = bootstrap.Modal.getInstance(modalEl);
+                    modal.hide();
+                    loadClients(currentPage);
+                }, 1000);
+            } else {
+                alertBox.className = 'alert alert-danger mt-3';
+                alertBox.innerText = 'Failed to update client.';
             }
         }
 

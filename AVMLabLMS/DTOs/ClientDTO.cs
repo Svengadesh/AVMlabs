@@ -41,9 +41,12 @@ namespace AVMLabLMS.DTOs
         public string ClientName { get; set; }
         public string ContactPerson { get; set; }
         public string Phone { get; set; }
+        [EmailAddress(ErrorMessage = "Invalid email format.")]
         public string Email { get; set; }
         public string City { get; set; }
         public string Country { get; set; }
+        
+        [Range(0.01, double.MaxValue, ErrorMessage = "Credit Limit must be greater than 0.")]
         public decimal CreditLimit { get; set; }
     }
 }

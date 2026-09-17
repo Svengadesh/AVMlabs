@@ -6,8 +6,13 @@
 <hr />
 
 <div class="row">
-    <div class="col-md-6">
-        <form id="woForm" onsubmit="event.preventDefault(); submitWorkOrder();">
+    <div class="col-12 col-md-10 col-lg-8">
+        <div class="card shadow-sm">
+            <div class="card-header bg-white">
+                <h4 class="mb-0 text-primary">Work Order Details</h4>
+            </div>
+            <div class="card-body">
+                <form id="woForm" onsubmit="event.preventDefault(); submitWorkOrder();">
             <div class="mb-3">
                 <label class="form-label">Select Client</label>
                 <div class="input-group">
@@ -22,44 +27,43 @@
 
             <div class="mb-3">
                 <h4>Tests</h4>
-                <table class="table table-sm">
-                    <thead>
-                        <tr>
-                            <th>Test ID (Code)</th>
-                            <th>Qty</th>
-                            <th>Rate</th>
-                            <th>Amount</th>
-                            <th></th>
-                        </tr>
-                    </thead>
-                    <tbody id="testRows">
-                        <!-- dynamic rows -->
-                    </tbody>
-                    <tfoot>
-                        <tr>
-                            <td colspan="3" class="text-end fw-bold">Total:</td>
-                            <td id="woTotalAmount" class="fw-bold">0.00</td>
-                            <td></td>
-                        </tr>
-                    </tfoot>
-                </table>
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Test ID (Code)</th>
+                                <th>Qty</th>
+                                <th>Rate</th>
+                                <th>Amount</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody id="testRows">
+                            <!-- dynamic rows -->
+                        </tbody>
+                        <tfoot>
+                            <tr>
+                                <td colspan="3" class="text-end fw-bold">Total:</td>
+                                <td id="woTotalAmount" class="fw-bold">0.00</td>
+                                <td></td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
                 <button type="button" class="btn btn-secondary btn-sm" id="btnAddTest" disabled onclick="addTestRow()">+ Add Test</button>
             </div>
 
-            <button type="submit" class="btn btn-primary" id="btnSubmit" disabled>Create Work Order</button>
-            <div id="formAlert" class="alert mt-3 d-none"></div>
-        </form>
+                <button type="submit" class="btn btn-primary" id="btnSubmit" disabled>Create Work Order</button>
+                <div id="formAlert" class="alert mt-3 d-none"></div>
+            </form>
+            </div>
+        </div>
     </div>
 </div>
 
 @section Scripts {
     <script>
-        let availableTests = [
-            { id: 1, code: 'T01', name: 'Blood Sugar', rate: 50 },
-            { id: 2, code: 'T02', name: 'Lipid Profile', rate: 150 },
-            { id: 3, code: 'T03', name: 'CBC', rate: 80 }
-            // For simplicity in UI, hardcoding a few tests or they could be fetched from API
-        ];
+        let availableTests = @Html.Raw(ViewBag.TestsJson);
         
         let woItems = [];
 
@@ -92,11 +96,11 @@
                 const display = document.getElementById('clientStatusDisplay');
                 
                 if (data.nblStatus === 'NBL') {
-                    display.innerHTML = `<span class="nbl-status-nbl">Status: NBL. Client is eligible for new Work Orders.</span>`;
+                    display.innerHTML = `<span class="badge bg-success fs-6 fw-normal">Status: NBL. Client is eligible for new Work Orders.</span>`;
                     document.getElementById('btnAddTest').disabled = false;
                     document.getElementById('btnSubmit').disabled = false;
                 } else {
-                    display.innerHTML = `<span class="nbl-status-non-nbl">Warning: Status is Non-NBL. Outstanding balance must be cleared first.</span>`;
+                    display.innerHTML = `<span class="badge bg-danger fs-6 fw-normal">Warning: Status is Non-NBL. Outstanding balance must be cleared first.</span>`;
                     document.getElementById('btnAddTest').disabled = true;
                     document.getElementById('btnSubmit').disabled = true;
                     woItems = [];

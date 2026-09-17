@@ -5,34 +5,84 @@
 <h2>Reports Dashboard</h2>
 <hr />
 
+<div class="card mb-4">
+    <div class="card-body">
+        <form id="dateFilterForm" class="row g-3" onsubmit="event.preventDefault(); loadDashboardData();">
+            <div class="col-md-4">
+                <label for="fromDate" class="form-label">From Date</label>
+                <input type="date" class="form-control" id="fromDate">
+            </div>
+            <div class="col-md-4">
+                <label for="toDate" class="form-label">To Date</label>
+                <input type="date" class="form-control" id="toDate">
+            </div>
+            <div class="col-md-4 d-flex align-items-end">
+                <button type="submit" class="btn btn-primary">Refresh</button>
+            </div>
+        </form>
+    </div>
+</div>
+
 <div class="row mb-4">
-    <div class="col-md-8">
-        <div class="card">
-            <div class="card-header bg-primary text-white">Daily Revenue (Last 30 Days)</div>
-            <div class="card-body">
-                <canvas id="revenueChart" height="100"></canvas>
+    <div class="col-md-3">
+        <div class="card text-center h-100">
+            <div class="card-body bg-light">
+                <h5 class="card-title">Total WOs</h5>
+                <h3 id="totalWOs" class="text-primary">0</h3>
             </div>
         </div>
     </div>
-    <div class="col-md-4">
-        <div class="card">
-            <div class="card-header bg-danger text-white">Top 5 Outstanding Clients</div>
-            <ul class="list-group list-group-flush" id="topClientsList">
-                <!-- populates via js -->
-            </ul>
-        </div>
-        
-        <div class="card mt-3">
-            <div class="card-body bg-light text-center">
-                <h5 class="card-title">Total System Outstanding</h5>
-                <h3 id="totalOutstanding" class="text-danger">0.00</h3>
+    <div class="col-md-3">
+        <div class="card text-center h-100">
+            <div class="card-body bg-light">
+                <h5 class="card-title">Total Tests</h5>
+                <h3 id="totalTests" class="text-info">0</h3>
             </div>
         </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center h-100">
+            <div class="card-body bg-light">
+                <h5 class="card-title">Total Revenue</h5>
+                <h3 id="totalRevenue" class="text-success">0.00</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center h-100">
+            <div class="card-body bg-light">
+                <h5 class="card-title">Clients > Credit Limit</h5>
+                <h3 id="clientsOverLimit" class="text-danger">0</h3>
+            </div>
+        </div>
+    </div>
+</div>
 
-        <div class="card mt-3">
-            <div class="card-body bg-light text-center">
-                <h5 class="card-title">Total Gateway Fees Collected</h5>
-                <h3 id="totalFees" class="text-success">0.00</h3>
+<div class="row mb-4">
+    <div class="col-md-7">
+        <div class="card h-100">
+            <div class="card-header bg-primary text-white">Daily Revenue</div>
+            <div class="card-body">
+                <canvas id="revenueChart" height="150"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-5">
+        <div class="card h-100">
+            <div class="card-header bg-danger text-white">Overall Top 5 Outstanding Clients</div>
+            <div class="card-body p-0">
+                <table class="table table-striped mb-0">
+                    <thead>
+                        <tr>
+                            <th>Client</th>
+                            <th>Outstanding</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="topClientsTableBody">
+                        <!-- populates via js -->
+                    </tbody>
+                </table>
             </div>
         </div>
     </div>
@@ -40,55 +90,78 @@
 
 @section Scripts {
     <script>
-        document.addEventListener('DOMContentLoaded', async () => {
-            // Load chart data
-            const resChart = await fetch('/api/reports/daily-summary');
+        let chartInstance = null;
+
+        document.addEventListener('DOMContentLoaded', () => {
+            // Set default dates
+            const to = new Date();
+            const from = new Date();
+            from.setDate(to.getDate() - 30);
+            document.getElementById('fromDate').valueAsDate = from;
+            document.getElementById('toDate').valueAsDate = to;
+            
+            loadDashboardData();
+        });
+
+        async function loadDashboardData() {
+            const from = document.getElementById('fromDate').value;
+            const to = document.getElementById('toDate').value;
+            const queryParams = `?from=${from}&to=${to}`;
+
+            // Load chart & WOs/Revenue data
+            const resChart = await fetch('/api/reports/daily-summary' + queryParams);
             if (resChart.ok) {
                 const data = await resChart.json();
                 data.reverse(); // oldest to newest for chart
 
                 const labels = data.map(d => new Date(d.date).toLocaleDateString());
                 const revenues = data.map(d => d.totalRevenue);
+                
+                const totalWOs = data.reduce((sum, d) => sum + d.totalWorkOrders, 0);
+                const totalTests = data.reduce((sum, d) => sum + d.totalTests, 0);
+                const totalRev = data.reduce((sum, d) => sum + d.totalRevenue, 0);
+                
+                document.getElementById('totalWOs').innerText = totalWOs;
+                document.getElementById('totalTests').innerText = totalTests;
+                document.getElementById('totalRevenue').innerText = '$' + totalRev.toFixed(2);
 
                 const ctx = document.getElementById('revenueChart').getContext('2d');
-                new Chart(ctx, {
-                    type: 'line',
+                if (chartInstance) chartInstance.destroy();
+                chartInstance = new Chart(ctx, {
+                    type: 'bar',
                     data: {
                         labels: labels,
                         datasets: [{
                             label: 'Daily Revenue',
                             data: revenues,
-                            borderColor: 'rgb(75, 192, 192)',
-                            tension: 0.1,
-                            fill: true,
-                            backgroundColor: 'rgba(75, 192, 192, 0.2)'
+                            backgroundColor: 'rgba(15, 118, 110, 0.5)',
+                            borderColor: 'rgba(15, 118, 110, 1)',
+                            borderWidth: 1
                         }]
                     },
-                    options: {
-                        responsive: true
-                    }
+                    options: { responsive: true }
                 });
             }
 
-            // Load outstanding
+            // Load outstanding clients report
             const resClients = await fetch('/api/reports/outstanding-clients');
             if (resClients.ok) {
-                const clients = await resClients.json();
-                const list = document.getElementById('topClientsList');
-                clients.forEach(c => {
-                    const li = document.createElement('li');
-                    li.className = 'list-group-item d-flex justify-content-between align-items-center';
-                    li.innerHTML = `${c.clientName} <span class="badge bg-danger rounded-pill">${c.outstandingBalance.toFixed(2)}</span>`;
-                    list.appendChild(li);
+                const report = await resClients.json();
+                
+                document.getElementById('clientsOverLimit').innerText = report.clientsAboveLimit.length;
+
+                const tbody = document.getElementById('topClientsTableBody');
+                tbody.innerHTML = '';
+                report.topOutstandingClients.forEach(c => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td>${c.clientName}</td>
+                        <td class="text-danger fw-bold">$${c.outstandingBalance.toFixed(2)}</td>
+                        <td><a href="/Clients/Ledger/${c.clientId}" class="btn btn-sm btn-outline-primary">View Ledger</a></td>
+                    `;
+                    tbody.appendChild(tr);
                 });
             }
-
-            // Total Gateway Fees
-            const resFees = await fetch('/api/reports/gateway-fees');
-            if (resFees.ok) {
-                const fees = await resFees.json();
-                document.getElementById('totalFees').innerText = fees.totalGatewayFees.toFixed(2);
-            }
-        });
+        }
     </script>
 }

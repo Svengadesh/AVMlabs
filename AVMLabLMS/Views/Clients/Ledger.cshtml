@@ -35,13 +35,14 @@
         <div class="card bg-light">
             <div class="card-body">
                 <h5 class="card-title">NBL Status</h5>
-                <p class="card-text fs-4" id="nblStatus"></p>
+                <p class="card-text fs-4"><span id="nblStatusBadge" class="badge"></span></p>
             </div>
         </div>
     </div>
 </div>
 
 <h4>Ledger Records</h4>
+<div class="table-responsive">
 <table class="table table-bordered table-striped">
     <thead class="table-dark">
         <tr>
@@ -63,6 +64,7 @@
         </tr>
     </tfoot>
 </table>
+</div>
 
 <div class="row mt-4">
     <div class="col-md-4 offset-md-8">
@@ -126,9 +128,9 @@
                 document.getElementById('creditLimit').innerText = data.creditLimit.toFixed(2);
                 document.getElementById('totalOutstanding').innerText = data.totalOutstanding.toFixed(2);
                 
-                const statusEl = document.getElementById('nblStatus');
-                statusEl.innerText = data.nblStatus;
-                statusEl.className = 'card-text fs-4 ' + (data.nblStatus === 'NBL' ? 'nbl-status-nbl' : 'nbl-status-non-nbl');
+                const statusBadge = document.getElementById('nblStatusBadge');
+                statusBadge.innerText = data.nblStatus;
+                statusBadge.className = 'badge ' + (data.nblStatus === 'NBL' ? 'bg-success' : 'bg-danger');
 
                 document.getElementById('sumInvoiced').innerText = data.totalInvoiced.toFixed(2);
                 document.getElementById('sumPaid').innerText = data.totalPaid.toFixed(2);
@@ -191,9 +193,10 @@
                     loadLedger();
                 }, 1500);
             } else {
-                const error = await response.json();
+                const errorData = await response.json();
                 alertBox.className = 'alert alert-danger';
-                alertBox.innerText = error.Error || "An error occurred";
+                // ASP.NET Core serializes 'new { Error = ... }' to camelCase 'error' by default.
+                alertBox.innerText = errorData.error || errorData.Error || errorData.title || "An error occurred";
             }
         }
     </script>

@@ -109,18 +109,28 @@ WITH DateCTE AS (
     FROM DateCTE
     WHERE DateVal < CAST(GETDATE() AS DATE)
 )
-SELECT d.DateVal, COUNT(w.WOId) AS TotalWorkOrders, ISNULL(SUM(w.TotalAmount), 0) AS TotalRevenue
+SELECT d.DateVal, 
+       COUNT(w.WOId) AS TotalWorkOrders, 
+       ISNULL(SUM(w.TotalTests), 0) AS TotalTests, 
+       ISNULL(SUM(w.TotalAmount), 0) AS TotalRevenue
 FROM DateCTE d
-LEFT JOIN WorkOrders w ON CAST(w.WODate AS DATE) = d.DateVal
+LEFT JOIN (
+    SELECT w1.WOId, CAST(w1.WODate AS DATE) AS WODate, w1.TotalAmount, SUM(wi.Quantity) AS TotalTests
+    FROM WorkOrders w1
+    LEFT JOIN WorkOrderItems wi ON w1.WOId = wi.WOId
+    GROUP BY w1.WOId, w1.WODate, w1.TotalAmount
+) w ON w.WODate = d.DateVal
 GROUP BY d.DateVal
 ORDER BY d.DateVal DESC
 OPTION (MAXRECURSION 100);
 
 -- 3. In-transit samples older than 48 hours
-SELECT w.WOId, w.WODate, c.ClientName, w.Status, w.TotalAmount
+SELECT w.WOId, c.ClientName, t.TestName, w.WODate, DATEDIFF(HOUR, w.WODate, GETDATE()) AS HoursElapsed
 FROM WorkOrders w
 JOIN Clients c ON w.ClientId = c.ClientId
-WHERE w.Status NOT IN ('Reported', 'Billed') 
+JOIN WorkOrderItems wi ON w.WOId = wi.WOId
+JOIN Tests t ON wi.TestId = t.TestId
+WHERE wi.SampleStatus = 'InTransit' 
   AND w.WODate < DATEADD(HOUR, -48, GETDATE());
 
 

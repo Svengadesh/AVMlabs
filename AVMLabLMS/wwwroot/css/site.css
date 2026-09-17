@@ -1,0 +1,187 @@
+:root {
+    --primary-color: #0b7a75; /* Professional dental teal / blue-green */
+    --accent-color: #1b4965; /* Dark navy for text and accents */
+    --bg-color: #eaf6f6; /* Very light teal/blue background */
+    --card-bg: #ffffff;
+    --text-color: #1e293b; /* Charcoal/dark navy for readable text */
+    --border-color: #cce3e3;
+    --sidebar-bg: #115e59; /* Slightly darker dental blue-green */
+    --sidebar-text: #f8fafc; /* High contrast white for visibility */
+    --sidebar-hover: #0f766e;
+    --sidebar-active: #042f2e; /* Clear dark highlight for active item */
+    --table-head-bg: #dff0f0; /* Very light teal header */
+}
+
+html, body {
+    width: 100%;
+    height: 100%;
+    overflow: hidden; /* Prevent body scrolling */
+}
+
+body {
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background-color: var(--bg-color);
+    color: var(--text-color);
+}
+
+/* Top Navbar */
+.top-navbar {
+    background-color: var(--card-bg);
+    border-bottom: 1px solid var(--border-color);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+}
+
+.header-logo {
+    max-height: 40px;
+    width: auto;
+}
+@media (max-width: 768px) {
+    .header-logo {
+        max-height: 32px;
+    }
+}
+
+/* Sidebar */
+.sidebar {
+    background-color: var(--sidebar-bg) !important;
+    border-right: none;
+    box-shadow: 2px 0 5px rgba(0,0,0,0.1);
+}
+
+.sidebar .nav-link {
+    color: #ffffff !important;
+    font-weight: 500;
+    padding: 0.85rem 1rem;
+    margin-bottom: 0.25rem;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+    opacity: 1 !important; /* Ensure it is fully visible */
+}
+
+.sidebar .nav-link i {
+    color: #ffffff !important;
+    opacity: 1 !important;
+}
+
+.sidebar .nav-link:hover {
+    color: #ffffff !important;
+    background-color: var(--sidebar-hover) !important;
+    opacity: 1 !important;
+}
+.sidebar .nav-link.active {
+    color: #ffffff !important;
+    background-color: var(--sidebar-active) !important;
+    opacity: 1 !important;
+    font-weight: 600;
+}
+
+.sidebar-border {
+    border-color: rgba(255,255,255,0.15) !important;
+}
+
+/* Main Content */
+main {
+    padding-top: 1.5rem;
+    padding-bottom: 2rem;
+}
+
+h1, h2, h3, h4, h5 {
+    color: var(--primary-color);
+    font-weight: 600;
+    margin-bottom: 1.2rem;
+}
+
+/* Cards */
+.card {
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    margin-bottom: 1.5rem;
+    background-color: var(--card-bg);
+}
+
+.card-header {
+    background-color: rgba(0,0,0,0.02);
+    border-bottom: 1px solid var(--border-color);
+    font-weight: 600;
+}
+.card-header.bg-primary {
+    background-color: var(--primary-color) !important;
+    color: #ffffff !important;
+}
+.card-header.bg-danger {
+    background-color: #dc3545 !important;
+    color: #ffffff !important;
+}
+
+/* Buttons */
+.btn-primary {
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
+    font-weight: 500;
+}
+.btn-primary:hover {
+    background-color: #085e5a;
+    border-color: #085e5a;
+}
+.btn-outline-primary {
+    color: var(--primary-color);
+    border-color: var(--primary-color);
+}
+.btn-outline-primary:hover {
+    background-color: var(--primary-color);
+    color: white;
+}
+
+/* Success/Danger overrides to ensure contrast */
+.bg-success {
+    background-color: #198754 !important; /* Green */
+}
+.btn-success {
+    background-color: #198754;
+    border-color: #198754;
+}
+.btn-success:hover {
+    background-color: #157347;
+    border-color: #146c43;
+}
+.btn-outline-success {
+    color: #198754;
+    border-color: #198754;
+}
+.btn-outline-success:hover {
+    background-color: #198754;
+    color: #fff;
+}
+
+/* Tables */
+.table {
+    margin-bottom: 0;
+}
+.table th {
+    background-color: var(--table-head-bg);
+    color: var(--accent-color);
+    font-weight: 600;
+    border-bottom: 2px solid var(--border-color);
+    white-space: nowrap;
+}
+
+.table td {
+    vertical-align: middle;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+/* Forms */
+.form-control, .form-select {
+    border-radius: 6px;
+    border: 1px solid #cbd5e1;
+}
+.form-control:focus, .form-select:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 0.25rem rgba(11, 122, 117, 0.25);
+}
+
+/* Status Classes */
+.nbl-status-nbl { color: #198754; font-weight: 600; }
+.nbl-status-non-nbl { color: #dc3545; font-weight: 600; }
+.cursor-pointer { cursor: pointer; }

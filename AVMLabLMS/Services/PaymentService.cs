@@ -27,16 +27,13 @@ namespace AVMLabLMS.Services
             decimal gatewayFee = 0;
             if (dto.Mode.Equals("Online", StringComparison.OrdinalIgnoreCase))
             {
-                // Simple gateway fee calculation (e.g., 2%)
+                // Gateway fee calculation (2%)
                 gatewayFee = dto.Amount * 0.02m;
             }
 
-            decimal netAmount = dto.Amount - gatewayFee;
-            decimal remainingAmountToApply = netAmount; // or apply full amount? Business rule says record payment, gateway fee separate debit.
-            
-            // Wait, standard practice: Amount is credited, Gateway Fee is debited separately.
-            // So the payment to invoices is the full Amount, but the net received by the lab is NetAmount.
-            // Let's allocate the full Amount to invoices to clear the client's balance.
+            decimal remainingAmountToApply = dto.Amount; // apply full payment amount to the invoice balance
+
+            bool feeApplied = false;
 
             foreach (var invoice in unpaidInvoices)
             {
@@ -49,6 +46,9 @@ namespace AVMLabLMS.Services
                 if (invoiceBalance > 0)
                 {
                     decimal amountToApply = Math.Min(invoiceBalance, remainingAmountToApply);
+                    
+                    decimal feeForThisRecord = !feeApplied ? gatewayFee : 0;
+                    if (feeForThisRecord > 0) feeApplied = true;
 
                     var payment = new Payment
                     {
@@ -56,8 +56,8 @@ namespace AVMLabLMS.Services
                         PaymentDate = DateTime.UtcNow,
                         Amount = amountToApply,
                         Mode = dto.Mode,
-                        GatewayFee = amountToApply == dto.Amount ? gatewayFee : 0, // apply fee to first record
-                        NetAmount = amountToApply - (amountToApply == dto.Amount ? gatewayFee : 0)
+                        GatewayFee = feeForThisRecord,
+                        NetAmount = amountToApply - feeForThisRecord
                     };
 
                     _context.Payments.Add(payment);
@@ -81,7 +81,7 @@ namespace AVMLabLMS.Services
                 Success = true,
                 Message = "Payment recorded successfully.",
                 GatewayFee = gatewayFee,
-                NetAmount = netAmount
+                NetAmount = dto.Amount - gatewayFee
             };
         }
     }

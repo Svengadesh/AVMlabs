@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace AVMLabLMS.ApiControllers
 {
     [ApiController]
-    [Route("api/[controller]")]
+    [Route("api/reports")]
     public class ReportsApiController : ControllerBase
     {
         private readonly ReportService _reportService;
@@ -26,16 +26,16 @@ namespace AVMLabLMS.ApiControllers
         }
 
         [HttpGet("outstanding-clients")]
-        public async Task<ActionResult<List<OutstandingClientDTO>>> GetOutstandingClients()
+        public async Task<ActionResult<object>> GetOutstandingClients()
         {
             var report = await _reportService.GetDashboardReportAsync();
-            return Ok(report.TopOutstandingClients);
+            return Ok(report);
         }
 
         [HttpGet("gateway-fees")]
-        public async Task<ActionResult<object>> GetGatewayFees()
+        public async Task<ActionResult<object>> GetGatewayFees([FromQuery] DateTime? from, [FromQuery] DateTime? to)
         {
-            var fees = await _reportService.GetTotalGatewayFeesAsync();
+            var fees = await _reportService.GetTotalGatewayFeesAsync(from, to);
             return Ok(new { TotalGatewayFees = fees });
         }
     }

@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace AVMLabLMS.ApiControllers
 {
     [ApiController]
-    [Route("api/[controller]")]
+    [Route("api/workorders")]
     public class WorkOrdersApiController : ControllerBase
     {
         private readonly WorkOrderService _woService;

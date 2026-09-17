@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace AVMLabLMS.ApiControllers
 {
     [ApiController]
-    [Route("api/[controller]")]
+    [Route("api/payments")]
     public class PaymentsApiController : ControllerBase
     {
         private readonly PaymentService _paymentService;

@@ -4,6 +4,7 @@ namespace AVMLabLMS.DTOs
     {
         public DateTime Date { get; set; }
         public int TotalWorkOrders { get; set; }
+        public int TotalTests { get; set; }
         public decimal TotalRevenue { get; set; }
     }
 
