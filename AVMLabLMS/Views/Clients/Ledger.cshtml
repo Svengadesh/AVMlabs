@@ -1,0 +1,200 @@
+@{
+    ViewData["Title"] = "Client Ledger";
+    int clientId = ViewBag.ClientId;
+}
+
+<div class="row mb-3">
+    <div class="col-md-8">
+        <h2>Client Ledger: <span id="clientName"></span></h2>
+    </div>
+    <div class="col-md-4 text-end">
+        <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#paymentModal">
+            Record Payment
+        </button>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card bg-light">
+            <div class="card-body">
+                <h5 class="card-title">Credit Limit</h5>
+                <p class="card-text fs-4" id="creditLimit"></p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-light">
+            <div class="card-body">
+                <h5 class="card-title">Total Outstanding</h5>
+                <p class="card-text fs-4" id="totalOutstanding"></p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-light">
+            <div class="card-body">
+                <h5 class="card-title">NBL Status</h5>
+                <p class="card-text fs-4" id="nblStatus"></p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<h4>Ledger Records</h4>
+<table class="table table-bordered table-striped">
+    <thead class="table-dark">
+        <tr>
+            <th>Date</th>
+            <th>Description</th>
+            <th>Debit (Inv/Fee)</th>
+            <th>Credit (Pay)</th>
+            <th>Running Balance</th>
+        </tr>
+    </thead>
+    <tbody id="ledgerTableBody">
+    </tbody>
+    <tfoot>
+        <tr class="fw-bold">
+            <td colspan="2" class="text-end">Totals:</td>
+            <td id="totalDebit">0.00</td>
+            <td id="totalCredit">0.00</td>
+            <td></td>
+        </tr>
+    </tfoot>
+</table>
+
+<div class="row mt-4">
+    <div class="col-md-4 offset-md-8">
+        <table class="table table-sm">
+            <tr><td>Total Invoiced:</td><td class="text-end" id="sumInvoiced">0.00</td></tr>
+            <tr><td>Total Paid:</td><td class="text-end" id="sumPaid">0.00</td></tr>
+            <tr><td>Total Gateway Fees:</td><td class="text-end" id="sumFees">0.00</td></tr>
+            <tr class="fw-bold"><td>Net Outstanding:</td><td class="text-end" id="sumNet">0.00</td></tr>
+        </table>
+    </div>
+</div>
+
+<!-- Payment Modal -->
+<div class="modal fade" id="paymentModal" tabindex="-1" aria-labelledby="paymentModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="paymentModalLabel">Record Payment</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <form id="paymentForm">
+            <input type="hidden" id="payClientId" value="@clientId" />
+            <div class="mb-3">
+                <label for="payAmount" class="form-label">Amount</label>
+                <input type="number" step="0.01" class="form-control" id="payAmount" required>
+            </div>
+            <div class="mb-3">
+                <label for="payMode" class="form-label">Mode</label>
+                <select class="form-select" id="payMode" required>
+                    <option value="Cash">Cash</option>
+                    <option value="Bank Transfer">Bank Transfer</option>
+                    <option value="Online">Online</option>
+                </select>
+            </div>
+            <div id="paymentAlert" class="alert d-none"></div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+        <button type="button" class="btn btn-primary" onclick="submitPayment()">Submit Payment</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+@section Scripts {
+    <script>
+        const clientId = @clientId;
+
+        document.addEventListener('DOMContentLoaded', () => {
+            loadLedger();
+        });
+
+        async function loadLedger() {
+            const response = await fetch(`/api/clients/${clientId}/ledger`);
+            if (response.ok) {
+                const data = await response.json();
+                
+                document.getElementById('clientName').innerText = data.clientName;
+                document.getElementById('creditLimit').innerText = data.creditLimit.toFixed(2);
+                document.getElementById('totalOutstanding').innerText = data.totalOutstanding.toFixed(2);
+                
+                const statusEl = document.getElementById('nblStatus');
+                statusEl.innerText = data.nblStatus;
+                statusEl.className = 'card-text fs-4 ' + (data.nblStatus === 'NBL' ? 'nbl-status-nbl' : 'nbl-status-non-nbl');
+
+                document.getElementById('sumInvoiced').innerText = data.totalInvoiced.toFixed(2);
+                document.getElementById('sumPaid').innerText = data.totalPaid.toFixed(2);
+                document.getElementById('sumFees').innerText = data.totalGatewayFees.toFixed(2);
+                document.getElementById('sumNet').innerText = data.totalOutstanding.toFixed(2);
+
+                let totalDebit = 0;
+                let totalCredit = 0;
+
+                const tbody = document.getElementById('ledgerTableBody');
+                tbody.innerHTML = '';
+                
+                data.records.forEach(r => {
+                    totalDebit += r.debit;
+                    totalCredit += r.credit;
+
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td>${new Date(r.date).toLocaleString()}</td>
+                        <td>${r.description}</td>
+                        <td>${r.debit > 0 ? r.debit.toFixed(2) : '-'}</td>
+                        <td>${r.credit > 0 ? r.credit.toFixed(2) : '-'}</td>
+                        <td>${r.runningBalance.toFixed(2)}</td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+
+                document.getElementById('totalDebit').innerText = totalDebit.toFixed(2);
+                document.getElementById('totalCredit').innerText = totalCredit.toFixed(2);
+            }
+        }
+
+        async function submitPayment() {
+            const amount = parseFloat(document.getElementById('payAmount').value);
+            const mode = document.getElementById('payMode').value;
+            
+            if (isNaN(amount) || amount <= 0) {
+                alert("Please enter a valid amount");
+                return;
+            }
+
+            const alertBox = document.getElementById('paymentAlert');
+            alertBox.className = 'alert d-none';
+
+            const response = await fetch('/api/payments', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ clientId, amount, mode })
+            });
+
+            if (response.ok) {
+                const resData = await response.json();
+                alertBox.className = 'alert alert-success';
+                alertBox.innerText = `Payment successful. Gateway Fee: ${resData.gatewayFee}.`;
+                
+                setTimeout(() => {
+                    const modalEl = document.getElementById('paymentModal');
+                    const modal = bootstrap.Modal.getInstance(modalEl);
+                    modal.hide();
+                    loadLedger();
+                }, 1500);
+            } else {
+                const error = await response.json();
+                alertBox.className = 'alert alert-danger';
+                alertBox.innerText = error.Error || "An error occurred";
+            }
+        }
+    </script>
+}

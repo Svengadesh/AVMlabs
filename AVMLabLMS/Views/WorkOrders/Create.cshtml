@@ -1,0 +1,205 @@
+@{
+    ViewData["Title"] = "New Work Order";
+}
+
+<h2>Create New Work Order</h2>
+<hr />
+
+<div class="row">
+    <div class="col-md-6">
+        <form id="woForm" onsubmit="event.preventDefault(); submitWorkOrder();">
+            <div class="mb-3">
+                <label class="form-label">Select Client</label>
+                <div class="input-group">
+                    <input type="text" id="clientSearch" class="form-control" placeholder="Type client name to search...">
+                    <button class="btn btn-outline-secondary" type="button" onclick="searchClient()">Search</button>
+                </div>
+                <div id="clientResults" class="list-group mt-2" style="position:absolute; z-index:1000; width: 95%;"></div>
+                
+                <input type="hidden" id="selectedClientId" />
+                <div class="mt-2 fs-5" id="clientStatusDisplay"></div>
+            </div>
+
+            <div class="mb-3">
+                <h4>Tests</h4>
+                <table class="table table-sm">
+                    <thead>
+                        <tr>
+                            <th>Test ID (Code)</th>
+                            <th>Qty</th>
+                            <th>Rate</th>
+                            <th>Amount</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody id="testRows">
+                        <!-- dynamic rows -->
+                    </tbody>
+                    <tfoot>
+                        <tr>
+                            <td colspan="3" class="text-end fw-bold">Total:</td>
+                            <td id="woTotalAmount" class="fw-bold">0.00</td>
+                            <td></td>
+                        </tr>
+                    </tfoot>
+                </table>
+                <button type="button" class="btn btn-secondary btn-sm" id="btnAddTest" disabled onclick="addTestRow()">+ Add Test</button>
+            </div>
+
+            <button type="submit" class="btn btn-primary" id="btnSubmit" disabled>Create Work Order</button>
+            <div id="formAlert" class="alert mt-3 d-none"></div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        let availableTests = [
+            { id: 1, code: 'T01', name: 'Blood Sugar', rate: 50 },
+            { id: 2, code: 'T02', name: 'Lipid Profile', rate: 150 },
+            { id: 3, code: 'T03', name: 'CBC', rate: 80 }
+            // For simplicity in UI, hardcoding a few tests or they could be fetched from API
+        ];
+        
+        let woItems = [];
+
+        async function searchClient() {
+            const term = document.getElementById('clientSearch').value;
+            const res = await fetch(`/api/clients?search=${encodeURIComponent(term)}`);
+            if (res.ok) {
+                const clients = await res.json();
+                const container = document.getElementById('clientResults');
+                container.innerHTML = '';
+                clients.forEach(c => {
+                    const a = document.createElement('a');
+                    a.className = 'list-group-item list-group-item-action cursor-pointer';
+                    a.innerText = c.clientName;
+                    a.onclick = () => selectClient(c);
+                    container.appendChild(a);
+                });
+            }
+        }
+
+        async function selectClient(client) {
+            document.getElementById('clientSearch').value = client.clientName;
+            document.getElementById('selectedClientId').value = client.clientId;
+            document.getElementById('clientResults').innerHTML = '';
+            
+            // Check NBL
+            const res = await fetch(`/api/clients/${client.clientId}/nbl-status`);
+            if (res.ok) {
+                const data = await res.json();
+                const display = document.getElementById('clientStatusDisplay');
+                
+                if (data.nblStatus === 'NBL') {
+                    display.innerHTML = `<span class="nbl-status-nbl">Status: NBL. Client is eligible for new Work Orders.</span>`;
+                    document.getElementById('btnAddTest').disabled = false;
+                    document.getElementById('btnSubmit').disabled = false;
+                } else {
+                    display.innerHTML = `<span class="nbl-status-non-nbl">Warning: Status is Non-NBL. Outstanding balance must be cleared first.</span>`;
+                    document.getElementById('btnAddTest').disabled = true;
+                    document.getElementById('btnSubmit').disabled = true;
+                    woItems = [];
+                    renderTests();
+                }
+            }
+        }
+
+        function addTestRow() {
+            woItems.push({ testId: availableTests[0].id, qty: 1, rate: availableTests[0].rate });
+            renderTests();
+        }
+
+        function removeTestRow(index) {
+            woItems.splice(index, 1);
+            renderTests();
+        }
+
+        function updateTestId(index, selectElem) {
+            const tId = parseInt(selectElem.value);
+            const testDef = availableTests.find(t => t.id === tId);
+            woItems[index].testId = tId;
+            woItems[index].rate = testDef.rate;
+            renderTests();
+        }
+
+        function updateQty(index, inputElem) {
+            let val = parseInt(inputElem.value);
+            if(isNaN(val) || val < 1) val = 1;
+            woItems[index].qty = val;
+            renderTests();
+        }
+
+        function renderTests() {
+            const tbody = document.getElementById('testRows');
+            tbody.innerHTML = '';
+            let total = 0;
+
+            woItems.forEach((item, index) => {
+                const amount = item.qty * item.rate;
+                total += amount;
+
+                let optionsHtml = availableTests.map(t => 
+                    `<option value="${t.id}" ${t.id === item.testId ? 'selected' : ''}>${t.code} - ${t.name}</option>`
+                ).join('');
+
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>
+                        <select class="form-select form-select-sm" onchange="updateTestId(${index}, this)">
+                            ${optionsHtml}
+                        </select>
+                    </td>
+                    <td>
+                        <input type="number" class="form-control form-control-sm" min="1" value="${item.qty}" onchange="updateQty(${index}, this)" style="width:70px" />
+                    </td>
+                    <td>${item.rate.toFixed(2)}</td>
+                    <td>${amount.toFixed(2)}</td>
+                    <td><button type="button" class="btn btn-sm btn-danger" onclick="removeTestRow(${index})">X</button></td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            document.getElementById('woTotalAmount').innerText = total.toFixed(2);
+        }
+
+        async function submitWorkOrder() {
+            const clientId = document.getElementById('selectedClientId').value;
+            if(!clientId) {
+                alert("Select a client first."); return;
+            }
+            if(woItems.length === 0) {
+                alert("Add at least one test."); return;
+            }
+
+            const payload = {
+                clientId: parseInt(clientId),
+                items: woItems.map(i => ({ testId: i.testId, quantity: i.qty }))
+            };
+
+            const alertBox = document.getElementById('formAlert');
+            const res = await fetch('/api/workorders', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            if (res.ok) {
+                const data = await res.json();
+                alertBox.className = 'alert alert-success';
+                alertBox.innerText = `Work Order created successfully! WO ID: ${data.woId}`;
+                woItems = [];
+                renderTests();
+                document.getElementById('clientSearch').value = '';
+                document.getElementById('selectedClientId').value = '';
+                document.getElementById('clientStatusDisplay').innerHTML = '';
+                document.getElementById('btnAddTest').disabled = true;
+                document.getElementById('btnSubmit').disabled = true;
+            } else {
+                const err = await res.json();
+                alertBox.className = 'alert alert-danger';
+                alertBox.innerText = err.Error || "An error occurred.";
+            }
+        }
+    </script>
+}
